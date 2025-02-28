@@ -1,10 +1,7 @@
 #pragma once
-#include <atomic>
-#include <vector>
 #ifndef PI
 #define PI 3.1415926535897932384626433832795
 #endif
-#include <freertos/semphr.h>
 
 class MT6701
 {
@@ -15,14 +12,14 @@ public:
     static constexpr float COUNTS_TO_RADIANS = 2.0 * PI / COUNTS_PER_REVOLUTION;
     static constexpr float COUNTS_TO_DEGREES = 360.0 / COUNTS_PER_REVOLUTION;
     static constexpr float SECONDS_PER_MINUTE = 60.0f;
-    static constexpr int RPM_THRESHOLD = 1000; // RPM threshold for filtering
-    static constexpr int RPM_FILTER_SIZE = 20; // Size of the RPM moving average filter
+    static constexpr int RPM_THRESHOLD = 1000;            // RPM threshold for filtering
+    static constexpr int RPM_FILTER_SIZE = 10;            // Reduced filter size for AVR
 
     MT6701(uint8_t device_address = DEFAULT_ADDRESS,
            int update_interval = UPDATE_INTERVAL,
            int rpm_threshold = RPM_THRESHOLD,
            int rpm_filter_size = RPM_FILTER_SIZE);
-    ~MT6701();
+    
     void begin();
     float getAngleRadians();
     float getAngleDegrees();
@@ -36,18 +33,17 @@ public:
 private:
     uint8_t address;
     int updateIntervalMillis;
-    std::atomic<unsigned long> lastUpdateTime{0};
-    std::atomic<int> count{0};
-    std::atomic<int> accumulator{0};
-    std::atomic<float> rpm{0};
-    std::vector<float> rpmFilter;
-    int rpmFilterIndex = 0;
+    unsigned long lastUpdateTime;
+    int count;
+    int accumulator;
+    float rpm;
+    
+    // Simple circular buffer for RPM values instead of vector
+    float rpmFilter[RPM_FILTER_SIZE];
+    int rpmFilterIndex;
     int rpmFilterSize;
     int rpmThreshold;
-    SemaphoreHandle_t rpmFilterMutex;
 
     int readCount();
-
     void updateRPMFilter(float newRPM);
-    static void updateTask(void *pvParameters);
 };
